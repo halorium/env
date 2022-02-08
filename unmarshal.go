@@ -20,8 +20,8 @@ var defaultOptions = Options{
 }
 
 type Options struct {
-	Tag string // default "env"
-	Required bool // default false
+	Tag      string // default "env"
+	Required bool   // default false
 }
 
 type Unmarshaler interface {
@@ -43,7 +43,7 @@ func Unmarshal(obj interface{}, options ...Options) error {
 	}
 
 	// recurse the struct and get env var data
-	envVars := make([]envVar,0)
+	envVars := make([]envVar, 0)
 	envVars, err := parseStruct(obj, opts)
 	if err != nil {
 		return err
@@ -84,13 +84,13 @@ func getOptions(opts ...Options) Options {
 }
 
 type envVar struct {
-	FieldName  string
-	TagKey   string
-	Field reflect.Value
-	Tags  reflect.StructTag
+	FieldName string
+	TagKey    string
+	Field     reflect.Value
+	Tags      reflect.StructTag
 }
 
-func parseStruct(obj interface{}, opts Options) ([]envVar,error) {
+func parseStruct(obj interface{}, opts Options) ([]envVar, error) {
 	rv := reflect.ValueOf(obj)
 	rt := rv.Type()
 
@@ -103,7 +103,7 @@ func parseStruct(obj interface{}, opts Options) ([]envVar,error) {
 		return nil, fmt.Errorf("object must be a struct")
 	}
 
-	envVars := make([]envVar,0)
+	envVars := make([]envVar, 0)
 
 	// iterate over struct fields
 	for i := 0; i < rv.NumField(); i++ {
@@ -116,7 +116,7 @@ func parseStruct(obj interface{}, opts Options) ([]envVar,error) {
 		}
 
 		// if pointer to struct or nil struct (instantiate it)
-		if rf.Kind() == reflect.Ptr && rf.Type().Elem().Kind() == reflect.Struct{
+		if rf.Kind() == reflect.Ptr && rf.Type().Elem().Kind() == reflect.Struct {
 			if rf.IsNil() {
 				// nil pointer to struct: create a zero instance
 				rf.Set(reflect.New(rf.Type().Elem()))
@@ -139,15 +139,15 @@ func parseStruct(obj interface{}, opts Options) ([]envVar,error) {
 		// non struct objects below
 
 		// ignore fields without a tag or explicitly ignored
-		if rsf.Tag.Get(opts.Tag) == "-" || rsf.Tag.Get(opts.Tag) == ""{
+		if rsf.Tag.Get(opts.Tag) == "-" || rsf.Tag.Get(opts.Tag) == "" {
 			continue
 		}
 
 		varInfo := envVar{
-			FieldName:  rsf.Name,
-			TagKey: rsf.Tag.Get(opts.Tag),
-			Field: rf,
-			Tags:  rsf.Tag,
+			FieldName: rsf.Name,
+			TagKey:    rsf.Tag.Get(opts.Tag),
+			Field:     rf,
+			Tags:      rsf.Tag,
 		}
 
 		envVars = append(envVars, varInfo)
@@ -263,54 +263,81 @@ func setValue(rv reflect.Value, val string) error {
 	return nil
 }
 
-func lookup(k string) (string, error){
-	val, ok := os.LookupEnv(k)
+func lookup(s string) (string, error) {
+	val, ok := os.LookupEnv(s)
 	if !ok {
-		return val, fmt.Errorf("'%s' not found",k)
+		return val, fmt.Errorf("env: '%s' not found", s)
 	}
 	return val, nil
 }
 
-func AsString(k string) (string, error) {
-	return lookup(k)
+func AsString(s string) (string, error) {
+	return lookup(s)
 }
 
-func AsBool(k string) (b bool, err error) {
-	val, err := lookup(k)
+func AsBool(s string) (v bool, e error) {
+	val, err := lookup(s)
 	if err != nil {
-		return b, err
+		return v, err
 	}
-	return strconv.ParseBool(val)
+	v, e = strconv.ParseBool(val)
+	if e != nil {
+		return v, parseError(s, val, "bool", 0)
+	}
+	return v, nil
 }
 
-func AsInt(k string, bitSize int) (i int64, err error) {
-	val, err := lookup(k)
+func AsInt(s string, bitSize int) (v int64, e error) {
+	val, err := lookup(s)
 	if err != nil {
-		return i, err
+		return v, err
 	}
-	return strconv.ParseInt(val, 0, bitSize)
+	v, e = strconv.ParseInt(val, 0, bitSize)
+	if e != nil {
+		return v, parseError(s, val, "int", bitSize)
+	}
+	return v, nil
 }
 
-func AsDuration(k string) (d time.Duration, err error) {
-	val, err := lookup(k)
+func AsDuration(s string) (v time.Duration, e error) {
+	val, err := lookup(s)
 	if err != nil {
-		return d, err
+		return v, err
 	}
-	return time.ParseDuration(val)
+	v, e = time.ParseDuration(val)
+	if e != nil {
+		return v, parseError(s, val, "duration", 0)
+	}
+	return v, nil
 }
 
-func AsFloat(k string, bitSize int) (f float64, err error) {
-	val, err := lookup(k)
+func AsFloat(s string, bitSize int) (v float64, e error) {
+	val, err := lookup(s)
 	if err != nil {
-		return f, err
+		return v, err
 	}
-	return strconv.ParseFloat(val, bitSize)
+	v, e = strconv.ParseFloat(val, bitSize)
+	if e != nil {
+		return v, parseError(s, val, "float", bitSize)
+	}
+	return v, nil
 }
 
-func AsUint(k string, bitSize int) (u uint64, err error) {
-	val, err := lookup(k)
+func AsUint(s string, bitSize int) (v uint64, e error) {
+	val, err := lookup(s)
 	if err != nil {
-		return u, err
+		return v, err
 	}
-	return strconv.ParseUint(val, 0, bitSize)
+	v, e = strconv.ParseUint(val, 0, bitSize)
+	if e != nil {
+		return v, parseError(s, val, "uint", bitSize)
+	}
+	return v, nil
+}
+
+func parseError(s string, v string, t string, b int) error {
+	if b != 0 {
+		t = fmt.Sprintf("%s[%d]", t, b)
+	}
+	return fmt.Errorf("env: unable to parse ['%s'='%s'] as %s", s, v, t)
 }
