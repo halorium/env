@@ -2,11 +2,12 @@ package env_test
 
 import (
 	"fmt"
-	"github.com/google/go-cmp/cmp"
-	"github.com/halorium/env"
 	"net"
+	"reflect"
 	"testing"
 	"time"
+
+	"github.com/halorium/env"
 )
 
 type setEnv func(t *testing.T)
@@ -508,13 +509,13 @@ func TestUnmarshal(t *testing.T) {
 			}
 
 			if err == nil {
-				if diff := cmp.Diff(c.want, c.obj); diff != "" {
-					t.Errorf("(-want +got):\n%s", diff)
-				}
-
-				// if !reflect.DeepEqual(c.want, c.obj) {
-				// 	t.Errorf("\nwant:'%#v'\ngot:'%#v'\n", c.want, c.obj)
+				// if diff := cmp.Diff(c.want, c.obj); diff != "" {
+				// 	t.Errorf("(-want +got):\n%s", diff)
 				// }
+
+				if !reflect.DeepEqual(c.want, c.obj) {
+					t.Errorf("\nwant:'%#v'\ngot:'%#v'\n", c.want, c.obj)
+				}
 
 			}
 		})
