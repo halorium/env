@@ -482,7 +482,7 @@ func TestUnmarshal(t *testing.T) {
 			},
 		},
 		{
-			name: "valid custom field with Unmarshaler",
+			name: "valid custom field",
 			obj: &struct {
 				IP CustomIP `env:"IP"`
 			}{},
@@ -588,11 +588,6 @@ type EmbeddedStruct struct {
 }
 
 type CustomIP net.IP
-
-func (c *CustomIP) UnmarshalENV(v string) error {
-	*c = CustomIP(net.ParseIP(v))
-	return nil
-}
 
 type CustomURL url.URL
 

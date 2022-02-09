@@ -124,8 +124,8 @@ func parseStruct(obj interface{}, opts Options) ([]envVar, error) {
 			rf = rf.Elem()
 		}
 
-		// if struct we need to recurse
-		if rf.Kind() == reflect.Struct {
+		// if struct we need to recurse (unless implements Unmarshaler)
+		if rf.Kind() == reflect.Struct && asUnmarshaler(rf) == nil {
 			rfi := rf.Addr().Interface()
 			envVrs, err := parseStruct(rfi, opts)
 			if err != nil {
@@ -134,8 +134,6 @@ func parseStruct(obj interface{}, opts Options) ([]envVar, error) {
 			envVars = append(envVars, envVrs...)
 			continue
 		}
-
-		// non struct objects below
 
 		// ignore fields without a tag or explicitly ignored
 		if rsf.Tag.Get(opts.Tag) == "-" || rsf.Tag.Get(opts.Tag) == "" {
@@ -159,11 +157,8 @@ func setValue(rv reflect.Value, val string) error {
 	rt := rv.Type()
 
 	// check for custom UnmarshalENV function
-	if rv.CanInterface() {
-		u, ok := rv.Interface().(Unmarshaler)
-		if ok {
-			return u.UnmarshalENV(val)
-		}
+	if u := asUnmarshaler(rv); u != nil {
+		return u.UnmarshalENV(val)
 	}
 
 	// instantiate field for pointer
@@ -259,6 +254,24 @@ func setValue(rv reflect.Value, val string) error {
 		return fmt.Errorf("field:'%s' is an unsupported type:'%s'", rv, rv.Type().String())
 	}
 
+	return nil
+}
+
+func asUnmarshaler(rv reflect.Value) Unmarshaler {
+	if rv.Kind() == reflect.Ptr {
+		if rv.IsNil() {
+			rv.Set(reflect.New(rv.Type().Elem()))
+		}
+	} else if rv.CanAddr() {
+		rv = rv.Addr()
+	}
+	if rv.CanInterface() {
+		u, ok := rv.Interface().(Unmarshaler)
+		if !ok {
+			return nil
+		}
+		return u
+	}
 	return nil
 }
 
