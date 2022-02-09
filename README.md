@@ -1,3 +1,5 @@
+[![Build Status](https://app.travis-ci.com/halorium/env.svg?branch=main)](https://app.travis-ci.com/halorium/env)
+
 # env
 
 ## A Zero Dependency - No Nonsense Environment Variable Parser / Unmarshaler
