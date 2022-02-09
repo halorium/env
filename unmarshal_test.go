@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"reflect"
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/halorium/env"
 )
 
@@ -524,14 +524,9 @@ func TestUnmarshal(t *testing.T) {
 			}
 
 			if err == nil {
-				if diff := cmp.Diff(c.want, c.obj); diff != "" {
-					t.Errorf("(-want +got):\n%s", diff)
+				if !reflect.DeepEqual(c.want, c.obj) {
+					t.Errorf("\nwant:'%#v'\ngot:'%#v'\n", c.want, c.obj)
 				}
-
-				// if !reflect.DeepEqual(c.want, c.obj) {
-				// 	t.Errorf("\nwant:'%#v'\ngot:'%#v'\n", c.want, c.obj)
-				// }
-
 			}
 		})
 	}
