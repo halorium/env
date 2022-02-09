@@ -25,7 +25,7 @@ type Options struct {
 }
 
 type Unmarshaler interface {
-	UnmarshalEnv(value string) error
+	UnmarshalENV(value string) error
 }
 
 func Unmarshal(obj interface{}, options ...Options) error {
@@ -43,7 +43,6 @@ func Unmarshal(obj interface{}, options ...Options) error {
 	}
 
 	// recurse the struct and get env var data
-	envVars := make([]envVar, 0)
 	envVars, err := parseStruct(obj, opts)
 	if err != nil {
 		return err
@@ -159,11 +158,11 @@ func parseStruct(obj interface{}, opts Options) ([]envVar, error) {
 func setValue(rv reflect.Value, val string) error {
 	rt := rv.Type()
 
-	// check for custom UnmarshalEnv function
+	// check for custom UnmarshalENV function
 	if rv.CanInterface() {
 		u, ok := rv.Interface().(Unmarshaler)
 		if ok {
-			return u.UnmarshalEnv(val)
+			return u.UnmarshalENV(val)
 		}
 	}
 

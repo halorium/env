@@ -3,10 +3,11 @@ package env_test
 import (
 	"fmt"
 	"net"
-	"reflect"
+	"net/url"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/halorium/env"
 )
 
@@ -494,6 +495,20 @@ func TestUnmarshal(t *testing.T) {
 				IP CustomIP `env:"IP"`
 			}{IP: CustomIP("127.0.0.1")},
 		},
+		{
+			name: "valid custom struct field with Unmarshaler",
+			obj: &struct {
+				URL CustomURL `env:"URL"`
+			}{},
+			setEnv: func(t *testing.T) {
+				t.Setenv("URL", "http://github.com/halorium/env")
+			},
+			opts: env.Options{},
+			err:  nil,
+			want: &struct {
+				URL CustomURL `env:"URL"`
+			}{URL: getCustomURL()},
+		},
 	}
 
 	for _, c := range cases {
@@ -509,13 +524,13 @@ func TestUnmarshal(t *testing.T) {
 			}
 
 			if err == nil {
-				// if diff := cmp.Diff(c.want, c.obj); diff != "" {
-				// 	t.Errorf("(-want +got):\n%s", diff)
-				// }
-
-				if !reflect.DeepEqual(c.want, c.obj) {
-					t.Errorf("\nwant:'%#v'\ngot:'%#v'\n", c.want, c.obj)
+				if diff := cmp.Diff(c.want, c.obj); diff != "" {
+					t.Errorf("(-want +got):\n%s", diff)
 				}
+
+				// if !reflect.DeepEqual(c.want, c.obj) {
+				// 	t.Errorf("\nwant:'%#v'\ngot:'%#v'\n", c.want, c.obj)
+				// }
 
 			}
 		})
@@ -576,6 +591,22 @@ type CustomIP net.IP
 
 func (c *CustomIP) UnmarshalENV(v string) error {
 	*c = CustomIP(net.ParseIP(v))
+	return nil
+}
+
+type CustomURL url.URL
+
+func getCustomURL() CustomURL {
+	u, _ := url.Parse("http://github.com/halorium/env")
+	return CustomURL(*u)
+}
+
+func (c *CustomURL) UnmarshalENV(v string) error {
+	u, e := url.Parse(v)
+	if e != nil {
+		return e
+	}
+	*c = CustomURL(*u)
 	return nil
 }
 
